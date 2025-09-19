@@ -44,7 +44,7 @@ This project demonstrates how **policy-based authorization** can be applied in C
 - **GitHub** – Source control and CI triggers.  
 - **PlainID PDP** – Policy decision engine.  
 - **Webhook Service** –  
-  - Language: Python (Flask/FastAPI), Node.js, or Go.  
+  - Language: Go.  
   - Packaged with Docker.  
   - Deployed via Helm into K3s.  
 - **ArgoCD SDK** – Programmatic interaction with ArgoCD.  
@@ -73,3 +73,4 @@ sequenceDiagram
         WH->>Argo: Block deployment
         WH->>Dev: Log and notify
     end
+
