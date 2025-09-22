@@ -38,3 +38,18 @@ Generate auth token
 
 # if flag --account is omitted then Argo CD generates token for current user
 argocd account generate-token --account <username> 
+
+# Grant your user admin permissions
+ kubectl edit cm argocd-rbac-cm -n argocd
+
+# Add following info 
+data:
+  policy.csv: |
+    g, admin, role:admin
+    g, alice, role:admin
+
+# Run Managemnet API for syncing applcation 
+curl -X POST \
+-H "Authorization: Bearer $ARGOCD_TOKEN" \
+-H "Content-Type: application/json" \
+https://192.168.93.120:8080/api/v1/applications/myapp-argo-application/sync
