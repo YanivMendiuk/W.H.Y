@@ -4,6 +4,7 @@ import (
     "log"
     "net/http"
     "os"
+    "path/filepath"
 
     "github.com/yanivmendiuk/W.H.Y/internal/config"
     "github.com/yanivmendiuk/W.H.Y/internal/plainid"
@@ -12,8 +13,8 @@ import (
 func authorizeHandler(cfg *config.Config) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         // Extract dynamic values from ArgoCD pre-sync request
-        committer := r.Header.Get("ARGOCD_APP_SOURCE_USER") // Example
-        path := r.URL.Query().Get("path")                  // e.g., /v1/plainId/tester
+        committer := r.Header.Get("ARGOCD_APP_SOURCE_USER")
+        path := r.URL.Query().Get("path")
 
         if committer == "" || path == "" {
             http.Error(w, "Missing committer or path", http.StatusBadRequest)
@@ -53,16 +54,29 @@ func authorizeHandler(cfg *config.Config) http.HandlerFunc {
 }
 
 func main() {
-    cfg := config.LoadConfig("application.yaml")
+    // Determine config path
+    cfgPath := os.Getenv("CONFIG_PATH")
+    if cfgPath == "" {
+        // Default relative to project root
+        cwd, err := os.Getwd()
+        if err != nil {
+            log.Fatalf("Failed to get current directory: %v", err)
+        }
+        cfgPath = filepath.Join(cwd, "config", "application.yaml")
+    }
+
+    cfg, err := config.LoadConfig(cfgPath)
+    if err != nil {
+        log.Fatalf("Failed to read config: %v", err)
+    }
 
     http.HandleFunc("/authorize", authorizeHandler(cfg))
     http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
         w.Write([]byte("ok"))
     })
 
-    log.Println("Starting webhook server on :8080...")
-    if err := http.ListenAndServe(":8080", nil); err != nil {
+    log.Println("Starting webhook server on :8181...")
+    if err := http.ListenAndServe(":8181", nil); err != nil {
         log.Fatalf("Server failed: %v", err)
     }
 }
-
