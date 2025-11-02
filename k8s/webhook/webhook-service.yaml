@@ -1,0 +1,15 @@
+# webhook-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook
+  namespace: webhook
+spec:
+  selector:
+    app: webhook
+  ports:
+    - protocol: TCP
+      port: 8181
+      targetPort: 8181
+  type: ClusterIP
+

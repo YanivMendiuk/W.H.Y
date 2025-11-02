@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook
+  namespace: webhook
+  labels:
+    app: webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webhook
+  template:
+    metadata:
+      labels:
+        app: webhook
+    spec:
+      containers:
+        - name: webhook
+          image: yanivmendiuk/webhook:1.1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8181
+          env:
+            # Existing config path
+            - name: CONFIG_PATH
+              value: "/app/config/application.yaml"
+            # Secrets
+            - name: CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: webhook-secrets
+                  key: clientId
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: webhook-secrets
+                  key: clientSecret
+          volumeMounts:
+            - name: config-volume
+              mountPath: /app/config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: webhook-config
+

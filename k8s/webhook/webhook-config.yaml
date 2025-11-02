@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: webhook-config
+  namespace: webhook
+data:
+  application.yaml: |
+    entityTypeId: Leumi_Array_Identity
+    resourceType: EP_ROLE_TEST
+    plainIdEndpoint: http://my-plainid-paa-runtime.webhook:80/api/runtime/permit-deny/v3
+
