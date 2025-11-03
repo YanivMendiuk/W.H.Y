@@ -5,7 +5,7 @@ metadata:
   namespace: myapp
   annotations:
     argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: HookSucceeded,HookFailed
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
     argocd.argoproj.io/hook-failure-policy: Fail
     argocd.argoproj.io/sync-wave: "0"
 spec:
@@ -25,7 +25,14 @@ spec:
             - sh
             - -c
             - |
-              RESPONSE=$(curl -s -w "%{http_code}" -o /tmp/response.txt \
+              echo "---- ENVIRONMENT VARIABLES ----"
+              env
+
+              echo "---- Sending request to webhook ----"
+              echo "App name (path query): ${ARGOCD_APP_NAME}"
+              echo "User (header): ${ARGOCD_APP_SOURCE_USER}"
+
+              RESPONSE=$(curl -v -s -w "%{http_code}" -o /tmp/response.txt \
                 -X POST "http://webhook.webhook.svc.cluster.local:8181/authorize?path=${ARGOCD_APP_NAME}" \
                 -H "Content-Type: application/json" \
                 -H "ARGOCD_APP_SOURCE_USER: ${ARGOCD_APP_SOURCE_USER}" \
@@ -34,8 +41,9 @@ spec:
               HTTP_CODE=${RESPONSE:(-3)}
               BODY=$(cat /tmp/response.txt)
 
-              echo "Webhook response HTTP code: $HTTP_CODE"
-              echo "Webhook response body: $BODY"
+              echo "---- Webhook response ----"
+              echo "HTTP code: $HTTP_CODE"
+              echo "Body: $BODY"
 
               if [ "$HTTP_CODE" -ne 200 ] || [ "$BODY" != "ALLOW" ]; then
                 echo "Authorization failed, aborting sync."
