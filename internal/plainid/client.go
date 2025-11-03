@@ -3,6 +3,7 @@ package plainid
 import (
     "bytes"
     "encoding/json"
+    "io/ioutil"
     "log"
     "net/http"
     "time"
@@ -22,11 +23,16 @@ type ResourceGroup struct {
 
 // Request represents the payload sent to PlainID
 type Request struct {
-    EntityID       string          `json:"entityId"`
-    EntityTypeID   string          `json:"entityTypeId"`
-    ClientID       string          `json:"clientId"`
-    ClientSecret   string          `json:"clientSecret"`
-    ListOfResources []ResourceGroup `json:"listOfResources"`
+    EntityID               string          `json:"entityId"`
+    EntityTypeID           string          `json:"entityTypeId"`
+    ClientID               string          `json:"clientId"`
+    ClientSecret           string          `json:"clientSecret"`
+    ListOfResources        []ResourceGroup `json:"listOfResources"`
+    UseCache               bool            `json:"useCache,omitempty"`
+    IncludeAccessPolicy    bool            `json:"includeAccessPolicy,omitempty"`
+    IncludeIdentity        bool            `json:"includeIdentity,omitempty"`
+    IncludeAssetAttributes bool            `json:"includeAssetAttributes,omitempty"`
+    IncludeDenyReason      bool            `json:"includeDenyReason,omitempty"`
 }
 
 // Response represents the PlainID authorization response
@@ -60,13 +66,26 @@ func Authorize(endpoint string, req Request) (string, error) {
     }
     defer resp.Body.Close()
 
+    bodyBytes, err := ioutil.ReadAll(resp.Body)
+    if err != nil {
+        log.Printf("Error reading response body: %v", err)
+        return "", err
+    }
+
+    // Log the response body regardless of status code
+    if resp.StatusCode != http.StatusOK {
+        log.Printf("Authorization failed with status %d: %s", resp.StatusCode, string(bodyBytes))
+        return "", err
+    }
+
+    log.Printf("Authorization succeeded with status 200. Response body: %s", string(bodyBytes))
+
     var r Response
-    if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+    if err := json.Unmarshal(bodyBytes, &r); err != nil {
         log.Printf("Error decoding response: %v", err)
         return "", err
     }
 
-    log.Printf("Received response from PlainID: %s", r.Result)
+    log.Printf("Parsed PlainID result: %s", r.Result)
     return r.Result, nil
 }
-

@@ -1,7 +1,5 @@
-# application.yaml
 clientId: PJMBO9FCTONFJ8EDYWT7
 clientSecret: JZ6gerPR3SWCugXOmHhtsuMZZnkkclS26o43XSDN
 entityTypeId: Leumi_Array_Identity
 resourceType: EP_ROLE_TEST
-plainIdEndpoint: https://a93c9e08076354cdbaf7e0ffe6ca8ef5-1536407533.us-east-1.elb.amazonaws.com/api/runtime/permit-deny/v3
-
+plainIdEndpoint: http://my-plainid-paa-runtime.yaniv-namespace.svc.cluster.local:80/api/runtime/permit-deny/v3
