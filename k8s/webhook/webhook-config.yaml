@@ -5,7 +5,8 @@ metadata:
   namespace: webhook
 data:
   application.yaml: |
-    entityTypeId: Leumi_Array_Identity
-    resourceType: EP_ROLE_TEST
-    plainIdEndpoint: http://my-plainid-paa-runtime.webhook:80/api/runtime/permit-deny/v3
+    entityTypeId: bank_users
+    resourceType: bank_users
+    plainIdEndpoint: http://my-plainid-paa-runtime.yaniv-namespace.svc.cluster.local:80/api/runtime/permit-deny/v3
+    action: Access
 
