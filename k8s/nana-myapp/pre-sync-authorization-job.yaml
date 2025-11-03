@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pre-sync-authorization
+  namespace: myapp
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    argocd.argoproj.io/hook-failure-policy: Fail
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: authorize
+          image: curlimages/curl:7.87.0
+          env:
+            - name: ARGOCD_APP_SOURCE_USER
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['argocd.argoproj.io/source-user']
+          command:
+            - sh
+            - -c
+            - |
+              RESPONSE=$(curl -s -w "%{http_code}" -o /tmp/response.txt \
+                -X POST "http://webhook.webhook.svc.cluster.local:8181/authorize?path=${ARGOCD_APP_NAME}" \
+                -H "Content-Type: application/json" \
+                -H "ARGOCD_APP_SOURCE_USER: ${ARGOCD_APP_SOURCE_USER}" \
+                -d '{}')
+
+              HTTP_CODE=${RESPONSE:(-3)}
+              BODY=$(cat /tmp/response.txt)
+
+              echo "Webhook response HTTP code: $HTTP_CODE"
+              echo "Webhook response body: $BODY"
+
+              if [ "$HTTP_CODE" -ne 200 ] || [ "$BODY" != "ALLOW" ]; then
+                echo "Authorization failed, aborting sync."
+                exit 1
+              else
+                echo "Authorization succeeded: $BODY"
+              fi
+
