@@ -9,15 +9,14 @@ spec:
   source:
     repoURL: https://github.com/YanivMendiuk/W.H.Y.git
     targetRevision: HEAD
-    path: dev
-  destination: 
+    path: k8s/nana-my-app
+  destination:
     server: https://kubernetes.default.svc
     namespace: myapp
 
   syncPolicy:
     syncOptions:
-    - CreateNamespace=true
-
-#    automated:
-#      selfHeal: true
-#      prune: true
+      - CreateNamespace=true
+    automated:
+      selfHeal: true
+      prune: true
