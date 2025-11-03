@@ -5,7 +5,7 @@ metadata:
   namespace: myapp
   annotations:
     argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded,HookFailed
     argocd.argoproj.io/hook-failure-policy: Fail
     argocd.argoproj.io/sync-wave: "0"
 spec:
