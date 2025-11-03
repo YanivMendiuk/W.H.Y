@@ -12,7 +12,7 @@ spec:
   backoffLimit: 0
   template:
     spec:
-      restartPolicy: Never
+      restartPolicy: OnFailure
       containers:
         - name: authorize
           image: curlimages/curl:7.87.0
