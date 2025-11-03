@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: pre-sync-authorization
+  generateName: pre-sync-authorization-
   namespace: myapp
   annotations:
     argocd.argoproj.io/hook: PreSync
