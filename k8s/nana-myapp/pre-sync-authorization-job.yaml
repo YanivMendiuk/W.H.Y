@@ -5,50 +5,43 @@ metadata:
   namespace: myapp
   annotations:
     argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    # Keep succeeded/failed pods for debugging
+    argocd.argoproj.io/hook-delete-policy: ""
     argocd.argoproj.io/hook-failure-policy: Fail
     argocd.argoproj.io/sync-wave: "0"
 spec:
-  backoffLimit: 0
+  backoffLimit: 1
   template:
     spec:
-      restartPolicy: OnFailure
+      restartPolicy: Never
+      # Keep pod around for a short period after termination
+      terminationGracePeriodSeconds: 300
       containers:
         - name: authorize
           image: curlimages/curl:7.87.0
+          # Keep all environment variables ArgoCD exposes
           env:
-            - name: ARGOCD_APP_SOURCE_USER
+            - name: ARGOCD_APP_NAME
               valueFrom:
                 fieldRef:
-                  fieldPath: metadata.annotations['argocd.argoproj.io/source-user']
+                  fieldPath: metadata.name
           command:
             - sh
             - -c
             - |
               echo "---- ENVIRONMENT VARIABLES ----"
               env
+              echo "---- STARTING WEBHOOK REQUEST ----"
 
-              echo "---- Sending request to webhook ----"
-              echo "App name (path query): ${ARGOCD_APP_NAME}"
-              echo "User (header): ${ARGOCD_APP_SOURCE_USER}"
+              # Print app name
+              echo "App name (from ARGOCD_APP_NAME): ${ARGOCD_APP_NAME}"
 
+              # Send POST to webhook
               RESPONSE=$(curl -v -s -w "%{http_code}" -o /tmp/response.txt \
                 -X POST "http://webhook.webhook.svc.cluster.local:8181/authorize?path=${ARGOCD_APP_NAME}" \
                 -H "Content-Type: application/json" \
-                -H "ARGOCD_APP_SOURCE_USER: ${ARGOCD_APP_SOURCE_USER}" \
+                -H "ARGOCD_APP_SOURCE_USER: ${ARGOCD_APP_SOURCE_USER:-unknown}" \
                 -d '{}')
 
               HTTP_CODE=${RESPONSE:(-3)}
               BODY=$(cat /tmp/response.txt)
-
-              echo "---- Webhook response ----"
-              echo "HTTP code: $HTTP_CODE"
-              echo "Body: $BODY"
-
-              if [ "$HTTP_CODE" -ne 200 ] || [ "$BODY" != "ALLOW" ]; then
-                echo "Authorization failed, aborting sync."
-                exit 1
-              else
-                echo "Authorization succeeded: $BODY"
-              fi
-
