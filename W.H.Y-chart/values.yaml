@@ -49,14 +49,18 @@ webhook:
 argocdApplication:
   enabled: true
   appName: protectedapp-argo-application
-  argocdNamespace: argocd
+  argocdNamespace: argocd  
   project: default
   repoURL: "https://github.com/YanivMendiuk/W.H.Y.git"
-  path: "k8s/nana-myapp"
+  path: "W.H.Y-chart"       
   targetRevision: HEAD
   destinationServer: "https://kubernetes.default.svc"
+  destinationNamespace: "{{ .Values.namespace }}"  
   syncOptions:
     - CreateNamespace=true
   automated:
     selfHeal: true
     prune: true
+  helm:
+    valueFiles:
+      - values.yaml          # ArgoCD will use your chart's values.yaml for Helm rendering
