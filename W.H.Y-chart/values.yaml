@@ -1,0 +1,62 @@
+# Namespace where all resources will be deployed
+namespace: protectedapp
+
+# ---------------------------
+# Main application (protectedApp)
+# ---------------------------
+protectedApp:
+  image: nanajanashia/argocd-app
+  tag: "1.2"
+  replicas: 2
+  port: 8080
+
+# ---------------------------
+# Pre-sync job configuration
+# ---------------------------
+preSyncJob:
+  configMapName: pre-sync-config
+  image: yanivmendiuk/pre-sync-job
+  tag: "1.0"
+  env:
+    appName: "protectedapp-argo-application"
+    repoUrl: "https://github.com/YanivMendiuk/W.H.Y.git"
+    webhookHost: "webhook.protectedapp.svc.cluster.local"
+    webhookPort: 8181
+  backoffLimit: 1
+  terminationGracePeriodSeconds: 300
+
+# ---------------------------
+# Webhook deployment configuration
+# ---------------------------
+webhook:
+  image: yanivmendiuk/webhook
+  tag: "1.5"
+  replicas: 1
+  port: 8181
+  config:
+    entityTypeId: github
+    resourceType: github_repos
+    plainIdServiceName: my-plainid-paa-runtime
+    plainIdNamespace: yaniv-namespace
+    action: Access
+  secrets:
+    clientId: 
+    clientSecret: 
+
+# ---------------------------
+# ArgoCD Application templating
+# ---------------------------
+argocdApplication:
+  enabled: true
+  appName: protectedapp-argo-application
+  argocdNamespace: argocd
+  project: default
+  repoURL: "https://github.com/YanivMendiuk/W.H.Y.git"
+  path: "k8s/nana-myapp"
+  targetRevision: HEAD
+  destinationServer: "https://kubernetes.default.svc"
+  syncOptions:
+    - CreateNamespace=true
+  automated:
+    selfHeal: true
+    prune: true

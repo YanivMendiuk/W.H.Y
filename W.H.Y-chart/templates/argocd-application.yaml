@@ -1,0 +1,30 @@
+{{- if .Values.argocdApplication.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Values.argocdApplication.appName }}
+  namespace: {{ .Values.argocdApplication.argocdNamespace }}
+spec:
+  project: {{ .Values.argocdApplication.project }}
+
+  source:
+    repoURL: {{ .Values.argocdApplication.repoURL }}
+    targetRevision: {{ .Values.argocdApplication.targetRevision }}
+    path: {{ .Values.argocdApplication.path }}
+
+  destination:
+    server: {{ .Values.argocdApplication.destinationServer }}
+    namespace: {{ $.Values.namespace }}
+
+  syncPolicy:
+    {{- if .Values.argocdApplication.syncOptions }}
+    syncOptions:
+      {{- range .Values.argocdApplication.syncOptions }}
+      - {{ . }}
+      {{- end }}
+    {{- end }}
+    automated:
+      selfHeal: {{ .Values.argocdApplication.automated.selfHeal }}
+      prune: {{ .Values.argocdApplication.automated.prune }}
+{{- end }}
+

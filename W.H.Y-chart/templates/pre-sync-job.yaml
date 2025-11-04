@@ -1,0 +1,80 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pre-sync-authorization-{{ randAlphaNum 5 | lower }}
+  namespace: {{ .Values.namespace }}
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: "HookSucceeded,HookFailed"
+    argocd.argoproj.io/hook-failure-policy: Fail
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  backoffLimit: {{ .Values.preSyncJob.backoffLimit }}
+  template:
+    spec:
+      restartPolicy: Never
+      terminationGracePeriodSeconds: {{ .Values.preSyncJob.terminationGracePeriodSeconds }}
+      containers:
+        - name: authorize
+          image: "{{ .Values.preSyncJob.image }}:{{ .Values.preSyncJob.tag }}"
+          env:
+            - name: ARGOCD_APP_NAME
+              value: "{{ .Values.preSyncJob.env.appName }}"
+            - name: ARGOCD_REPO_URL
+              value: "{{ .Values.preSyncJob.env.repoUrl }}"
+            - name: WEBHOOK_HOST
+              value: "{{ .Values.preSyncJob.env.webhookHost }}"
+            - name: WEBHOOK_PORT
+              value: "{{ .Values.preSyncJob.env.webhookPort }}"
+          command:
+            - sh
+            - -c
+            - |
+              echo "---- ENVIRONMENT VARIABLES ----"
+              env
+              echo "---- STARTING WEBHOOK REQUEST ----"
+
+              APP_NAME="${ARGOCD_APP_NAME}"
+              echo "App name: $APP_NAME"
+
+              REPO_URL="${ARGOCD_REPO_URL}"
+              echo "Repo URL: $REPO_URL"
+
+              # Parse owner and repo name
+              OWNER=$(echo "$REPO_URL" | sed -E 's#https://github.com/([^/]+)/([^/]+)(\.git)?#\1#')
+              REPO=$(echo "$REPO_URL" | sed -E 's#https://github.com/([^/]+)/([^/]+)(\.git)?#\2#')
+              REPO=${REPO%.git}
+
+              echo "Owner: $OWNER"
+              echo "Repo: $REPO"
+
+              # Fetch latest commit info from GitHub API
+              COMMIT_INFO=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/commits/HEAD")
+              LATEST_COMMIT=$(echo "$COMMIT_INFO" | jq -r '.sha')
+              AUTHOR_EMAIL=$(echo "$COMMIT_INFO" | jq -r '.commit.author.email')
+
+              echo "Latest commit SHA: $LATEST_COMMIT"
+              echo "Author email: $AUTHOR_EMAIL"
+
+              # Send POST to webhook
+              RESPONSE=$(curl -v -s -w "%{http_code}" -o /tmp/response.txt \
+                -X POST "http://${WEBHOOK_HOST}:${WEBHOOK_PORT}/authorize?path=${APP_NAME}" \
+                -H "Content-Type: application/json" \
+                -H "ARGOCD_APP_SOURCE_USER: ${ARGOCD_APP_SOURCE_USER:-unknown}" \
+                -d "{\"repoURL\":\"$REPO_URL\",\"latestCommit\":\"$LATEST_COMMIT\",\"authorEmail\":\"$AUTHOR_EMAIL\"}")
+
+              HTTP_CODE=${RESPONSE:(-3)}
+              BODY=$(cat /tmp/response.txt)
+
+              echo "HTTP_CODE: $HTTP_CODE"
+              echo "BODY: $BODY"
+
+              # Fail the job if webhook returned non-200
+              if [ "$HTTP_CODE" -ne 200 ]; then
+                echo "Authorization failed, exiting with code 1"
+                exit 1
+              fi
+
+              echo "Authorization successful!"
+              exit 0
+

@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: protectedapp
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.protectedApp.replicas }}
+  selector:
+    matchLabels:
+      app: protectedapp
+  template:
+    metadata:
+      labels:
+        app: protectedapp
+    spec:
+      containers:
+        - name: protectedapp
+          image: "{{ .Values.protectedApp.image }}:{{ .Values.protectedApp.tag }}"
+          ports:
+            - containerPort: {{ .Values.protectedApp.port }}
+

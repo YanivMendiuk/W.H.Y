@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: webhook-config
+  namespace: {{ .Values.namespace }}
+data:
+  application.yaml: |
+    entityTypeId: {{ .Values.webhook.config.entityTypeId }}
+    resourceType: {{ .Values.webhook.config.resourceType }}
+    plainIdEndpoint: "http://{{ .Values.webhook.config.plainIdServiceName }}.{{ .Values.webhook.config.plainIdNamespace }}.svc.cluster.local:80/api/runtime/permit-deny/v3"
+    action: {{ .Values.webhook.config.action }}
