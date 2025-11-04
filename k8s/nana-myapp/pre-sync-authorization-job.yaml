@@ -23,6 +23,11 @@ spec:
                 configMapKeyRef:
                   name: pre-sync-config
                   key: ARGOCD_APP_NAME
+            - name: ARGOCD_REPO_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: pre-sync-config
+                  key: ARGOCD_REPO_URL   
             - name: WEBHOOK_HOST
               valueFrom:
                 configMapKeyRef:
@@ -32,7 +37,7 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: pre-sync-config
-                  key: WEBHOOK_PORT
+                  key: WEBHOOK_PORT               
           command:
             - sh
             - -c
@@ -44,9 +49,11 @@ spec:
               APP_NAME="${ARGOCD_APP_NAME}"
               echo "App name: $APP_NAME"
 
-              REPO_URL=$(argocd app get "$APP_NAME" -o json | jq -r '.spec.source.repoURL')
+              # Use repo URL from config map
+              REPO_URL="${ARGOCD_REPO_URL}"
               echo "Repo URL: $REPO_URL"
 
+              # Parse owner and repo name
               OWNER=$(echo "$REPO_URL" | sed -E 's#https://github.com/([^/]+)/([^/]+)(\.git)?#\1#')
               REPO=$(echo "$REPO_URL" | sed -E 's#https://github.com/([^/]+)/([^/]+)(\.git)?#\2#')
               REPO=${REPO%.git}
@@ -54,6 +61,7 @@ spec:
               echo "Owner: $OWNER"
               echo "Repo: $REPO"
 
+              # Fetch latest commit info from GitHub API
               COMMIT_INFO=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/commits/HEAD")
               LATEST_COMMIT=$(echo "$COMMIT_INFO" | jq -r '.sha')
               AUTHOR_EMAIL=$(echo "$COMMIT_INFO" | jq -r '.commit.author.email')
@@ -61,6 +69,7 @@ spec:
               echo "Latest commit SHA: $LATEST_COMMIT"
               echo "Author email: $AUTHOR_EMAIL"
 
+              # Send POST to webhook
               RESPONSE=$(curl -v -s -w "%{http_code}" -o /tmp/response.txt \
                 -X POST "http://${WEBHOOK_HOST}:${WEBHOOK_PORT}/authorize?path=${APP_NAME}" \
                 -H "Content-Type: application/json" \
