@@ -5,8 +5,8 @@ metadata:
   namespace: webhook
 data:
   application.yaml: |
-    entityTypeId: bank_users
-    resourceType: bank_users
+    entityTypeId: github
+    resourceType: github_repos
     plainIdEndpoint: http://my-plainid-paa-runtime.yaniv-namespace.svc.cluster.local:80/api/runtime/permit-deny/v3
     action: Access
 
