@@ -1,0 +1,17 @@
+FROM alpine:3.20
+
+# Install dependencies
+RUN apk add --no-cache bash curl jq git wget
+
+# Install ArgoCD CLI
+RUN wget -q -O /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64 \
+    && chmod +x /usr/local/bin/argocd
+
+# Set non-root user
+RUN adduser -D -u 1000 jobuser
+USER jobuser
+WORKDIR /home/jobuser
+
+# Use bash as default
+ENTRYPOINT ["/bin/bash"]
+
