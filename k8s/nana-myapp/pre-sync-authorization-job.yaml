@@ -37,6 +37,15 @@ spec:
             - sh
             - -c
             - |
+              echo "Installing dependencies..."
+              apk add --no-cache curl jq git bash wget
+
+              echo "Installing ArgoCD CLI..."
+              wget -q -O /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+              chmod +x /usr/local/bin/argocd
+
+              echo "Dependencies installed successfully!"
+              
               echo "---- ENVIRONMENT VARIABLES ----"
               env
               echo "---- STARTING WEBHOOK REQUEST ----"
