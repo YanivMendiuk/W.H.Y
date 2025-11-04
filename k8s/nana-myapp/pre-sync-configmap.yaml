@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pre-sync-config
+  namespace: myapp
+data:
+  ARGOCD_APP_NAME: "myapp-argo-application"
+  WEBHOOK_HOST: "webhook.webhook.svc.cluster.local"
+  WEBHOOK_PORT: "8181"

@@ -5,7 +5,6 @@ metadata:
   namespace: myapp
   annotations:
     argocd.argoproj.io/hook: PreSync
-    # Keep succeeded/failed pods for debugging
     argocd.argoproj.io/hook-delete-policy: ""
     argocd.argoproj.io/hook-failure-policy: Fail
     argocd.argoproj.io/sync-wave: "0"
@@ -14,17 +13,26 @@ spec:
   template:
     spec:
       restartPolicy: Never
-      # Keep pod around for a short period after termination
       terminationGracePeriodSeconds: 300
       containers:
         - name: authorize
           image: curlimages/curl:7.87.0
-          # Keep all environment variables ArgoCD exposes
           env:
             - name: ARGOCD_APP_NAME
               valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
+                configMapKeyRef:
+                  name: pre-sync-config
+                  key: ARGOCD_APP_NAME
+            - name: WEBHOOK_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: pre-sync-config
+                  key: WEBHOOK_HOST
+            - name: WEBHOOK_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: pre-sync-config
+                  key: WEBHOOK_PORT
           command:
             - sh
             - -c
@@ -33,15 +41,34 @@ spec:
               env
               echo "---- STARTING WEBHOOK REQUEST ----"
 
-              # Print app name
-              echo "App name (from ARGOCD_APP_NAME): ${ARGOCD_APP_NAME}"
+              APP_NAME="${ARGOCD_APP_NAME}"
+              echo "App name: $APP_NAME"
 
-              # Send POST to webhook
+              REPO_URL=$(argocd app get "$APP_NAME" -o json | jq -r '.spec.source.repoURL')
+              echo "Repo URL: $REPO_URL"
+
+              OWNER=$(echo "$REPO_URL" | sed -E 's#https://github.com/([^/]+)/([^/]+)(\.git)?#\1#')
+              REPO=$(echo "$REPO_URL" | sed -E 's#https://github.com/([^/]+)/([^/]+)(\.git)?#\2#')
+              REPO=${REPO%.git}
+
+              echo "Owner: $OWNER"
+              echo "Repo: $REPO"
+
+              COMMIT_INFO=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/commits/HEAD")
+              LATEST_COMMIT=$(echo "$COMMIT_INFO" | jq -r '.sha')
+              AUTHOR_EMAIL=$(echo "$COMMIT_INFO" | jq -r '.commit.author.email')
+
+              echo "Latest commit SHA: $LATEST_COMMIT"
+              echo "Author email: $AUTHOR_EMAIL"
+
               RESPONSE=$(curl -v -s -w "%{http_code}" -o /tmp/response.txt \
-                -X POST "http://webhook.webhook.svc.cluster.local:8181/authorize?path=${ARGOCD_APP_NAME}" \
+                -X POST "http://${WEBHOOK_HOST}:${WEBHOOK_PORT}/authorize?path=${APP_NAME}" \
                 -H "Content-Type: application/json" \
                 -H "ARGOCD_APP_SOURCE_USER: ${ARGOCD_APP_SOURCE_USER:-unknown}" \
-                -d '{}')
+                -d "{\"repoURL\":\"$REPO_URL\",\"latestCommit\":\"$LATEST_COMMIT\",\"authorEmail\":\"$AUTHOR_EMAIL\"}")
 
               HTTP_CODE=${RESPONSE:(-3)}
               BODY=$(cat /tmp/response.txt)
+
+              echo "HTTP_CODE: $HTTP_CODE"
+              echo "BODY: $BODY"
