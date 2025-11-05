@@ -16,7 +16,7 @@ protectedApp:
 preSyncJob:
   configMapName: pre-sync-config
   image: yanivmendiuk/pre-sync-job
-  tag: "1.0"
+  tag: "1.2"
   env:
     appName: "protectedapp-argo-application"
     repoUrl: "https://github.com/YanivMendiuk/W.H.Y.git"
